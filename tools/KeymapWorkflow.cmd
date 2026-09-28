@@ -1,3 +1,3 @@
 @echo off
-pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0KeymapWorkflow.ps1" %*
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0KeymapWorkflow.ps1" -OpenEditor %*
 pause

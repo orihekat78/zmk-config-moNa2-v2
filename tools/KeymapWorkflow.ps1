@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Repository = 'orihekat78/zmk-config-moNa2-v2',
     [string]$Branch = 'main',
     [switch]$OpenEditor,
@@ -51,7 +51,7 @@ function Test-SideUf2 {
     try {
         $header = New-Object byte[] 8
         if ($stream.Read($header, 0, 8) -ne 8) { return $false }
-        return ([Convert]::ToHexString($header) -eq '5546320A57515D9E')
+        return ([BitConverter]::ToString($header) -eq '55-46-32-0A-57-51-5D-9E')
     }
     finally { $stream.Dispose() }
 }
