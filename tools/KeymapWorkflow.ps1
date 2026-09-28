@@ -151,6 +151,10 @@ try {
     if ($drives.Count -ne 1) { throw 'XIAOのUF2ドライブが見つかりませんでした。' }
     if (-not (Test-XiaoBootDrive $drives[0])) { throw 'UF2ドライブの識別情報を再確認できませんでした。' }
 
+    Write-Host 'XIAOのUF2ドライブから左右は判別できません。右側だけがUSB接続されていることを確認してください。'
+    $confirmation = Read-Host '右側に書き込む場合は RIGHT と入力'
+    if ($confirmation -cne 'RIGHT') { throw '書き込みを中止しました。' }
+
     Copy-Item -LiteralPath $uf2.FullName -Destination $drives[0] -ErrorAction Stop
     Write-Host "書き込み完了: $($drives[0])"
 }
