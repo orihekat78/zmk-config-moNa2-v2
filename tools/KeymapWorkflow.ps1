@@ -3,6 +3,7 @@ param(
     [string]$Branch = 'main',
     [switch]$OpenEditor,
     [switch]$BuildOnly,
+    [ValidateSet('Right', 'Left')][string]$Side = 'Right',
     [long]$RunId = 0,
     [string]$Uf2Drive,
     [ValidateRange(1, 120)][int]$TimeoutMinutes = 45
@@ -11,6 +12,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $editorUrl = 'https://nickcoutsos.github.io/keymap-editor/'
 $keymapPath = 'config/mona2.keymap'
+$sideCode = if ($Side -eq 'Left') { 'l' } else { 'r' }
+$sideLabel = if ($Side -eq 'Left') { '左側' } else { '右側' }
+$sideConfirmation = $Side.ToUpperInvariant()
 
 function Invoke-Gh {
     param([string[]]$Arguments)
@@ -39,9 +43,9 @@ function Get-BuildRun {
         Select-Object -First 1)
 }
 
-function Test-RightUf2 {
-    param([System.IO.FileInfo]$File)
-    if ($File.Name -notmatch '(?i)^mona2_r(?:[ _-].*)?\.uf2$') { return $false }
+function Test-SideUf2 {
+    param([System.IO.FileInfo]$File, [string]$Code)
+    if ($File.Name -notmatch "(?i)^mona2_$Code(?:[ _-].*)?\.uf2$") { return $false }
     if ($File.Length -lt 512 -or $File.Length % 512 -ne 0) { return $false }
     $stream = $File.OpenRead()
     try {
@@ -130,15 +134,15 @@ try {
     Invoke-Gh @('run', 'download', [string]$run.databaseId, '-R', $Repository,
         '-n', 'firmware', '-D', $outputDir) | Out-Null
     $candidates = @(Get-ChildItem -LiteralPath $outputDir -File -Recurse -Filter '*.uf2' |
-        Where-Object { Test-RightUf2 $_ })
+        Where-Object { Test-SideUf2 $_ $sideCode })
     if ($candidates.Count -ne 1) {
-        throw "右側UF2が1個に決まりません。成果物を確認してください: $outputDir"
+        throw "${sideLabel}UF2が1個に決まりません。成果物を確認してください: $outputDir"
     }
     $uf2 = $candidates[0]
-    Write-Host "右側UF2: $($uf2.FullName)"
+    Write-Host "${sideLabel}UF2: $($uf2.FullName)"
     if ($BuildOnly) { Write-Host 'ビルド成果物の取得まで完了しました。'; exit 0 }
 
-    Write-Host '右側をUSB接続し、RESETを素早く2回押してください。UF2ドライブを待っています。'
+    Write-Host "${sideLabel}をUSB接続し、RESETを素早く2回押してください。UF2ドライブを待っています。"
     $driveDeadline = (Get-Date).AddMinutes(5)
     do {
         $drives = @(Get-XiaoBootDrives)
@@ -151,9 +155,9 @@ try {
     if ($drives.Count -ne 1) { throw 'XIAOのUF2ドライブが見つかりませんでした。' }
     if (-not (Test-XiaoBootDrive $drives[0])) { throw 'UF2ドライブの識別情報を再確認できませんでした。' }
 
-    Write-Host 'XIAOのUF2ドライブから左右は判別できません。右側だけがUSB接続されていることを確認してください。'
-    $confirmation = Read-Host '右側に書き込む場合は RIGHT と入力'
-    if ($confirmation -cne 'RIGHT') { throw '書き込みを中止しました。' }
+    Write-Host "XIAOのUF2ドライブから左右は判別できません。${sideLabel}だけがUSB接続されていることを確認してください。"
+    $confirmation = Read-Host "${sideLabel}に書き込む場合は $sideConfirmation と入力"
+    if ($confirmation -cne $sideConfirmation) { throw '書き込みを中止しました。' }
 
     Copy-Item -LiteralPath $uf2.FullName -Destination $drives[0] -ErrorAction Stop
     Write-Host "書き込み完了: $($drives[0])"
